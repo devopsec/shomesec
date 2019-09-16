@@ -1,0 +1,17 @@
+[Unit]
+Description=pi Video Server Service
+After=network.target
+
+[Service]
+Type=simple
+SyslogIdentifier=pivid
+Environment='SHOMESEC_PROJECT_DIR=/opt/shomesec'
+EnvironmentFile=-/etc/default/shomesec/pivid.conf
+PIDFile=/var/run/shomesec/pivid.pid
+ExecStartPre=-/bin/mkdir -p /var/run/shomesec
+ExecStartPre=-/bin/chown -R shomesec:shomesec /var/run/shomesec
+ExecStart=/usr/bin/python3 ${SHOMESEC_PROJECT_DIR}/pisensor/piVideoServer.py
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
