@@ -2,6 +2,23 @@
 
 
 
+### Got Video Streaming working!
+
+> Branches Affected: master  
+> Tags Affected:   
+> Date: Sun, 22 Sep 2019 21:55:23 -0400  
+> Author: Tyler Moore (tmoore@goflyball.com)  
+> Committer: Tyler Moore (tmoore@goflyball.com)  
+
+- fix video streaming issues
+- added some async functions
+- addded support for multiple streams per client
+- many other bug fixes
+
+
+---
+
+
 ### Initial Commit
 
 > Branches Affected: master  

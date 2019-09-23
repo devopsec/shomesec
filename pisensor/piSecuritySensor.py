@@ -14,9 +14,6 @@ motion_sensor_enabled = True
 infrared_sensor_enabled = True
 door_sensor_enabled = True
 window_sensor_enabled = False
-video_dir = "/var/backups/videos" # video storage
-video_resolution = (1920,1080) # resolution in pixels
-video_fps = 30 # frames per second
 record_timeout = 3 # seconds to record until checking motion sensor
 loop_delay = 1 # time between full sensor checks
 
@@ -44,30 +41,32 @@ def sigHandler(signum=None, frame=None):
         pass
 
 def record():
-    with open(pivid_pid_file, 'r') as f:
-        pivid_pid = f.read()
+    try:
+        with open(pivid_pid_file, 'r') as f:
+            pivid_pid = f.read()
 
-    if len(pivid_pid) > 0:
-        pivid_pid = int(pivid_pid)
-        # tell the pivid proc to record to file
-        try:
+        if len(pivid_pid) > 0:
+            pivid_pid = int(pivid_pid)
+            # tell the pivid proc to record to file
+
             os.kill(pivid_pid, signal.SIGUSR1)
             print("recording to file")
-        except ProcessLookupError:
-            print("pivid process is dead")
+    except (FileNotFoundError, ProcessLookupError):
+        print("pivid process is dead")
 
 def norecord():
-    with open(pivid_pid_file, 'r') as f:
-        pivid_pid = f.read()
+    try:
+        with open(pivid_pid_file, 'r') as f:
+            pivid_pid = f.read()
 
-    if len(pivid_pid) > 0:
-        pivid_pid = int(pivid_pid)
-        # tell the pivid proc to stop recording to file
-        try:
+        if len(pivid_pid) > 0:
+            pivid_pid = int(pivid_pid)
+            # tell the pivid proc to stop recording to file
+
             os.kill(pivid_pid, signal.SIGUSR2)
             print("not recording to file")
-        except ProcessLookupError:
-            print("pivid process is dead")
+    except (FileNotFoundError, ProcessLookupError):
+        print("pivid process is dead")
 
 def setIR():
     timenow = datetime.now().time()
@@ -81,16 +80,16 @@ def setIR():
         print("Camera IR Inactive")
 
 def setup():
-    # make sure video backup dir exists
-    if not os.path.exists(video_dir):
-        os.makedirs(video_dir)
     # create pid file
     with open(pid_file, 'w') as pidfd:
         pidfd.write(str(os.getpid()))
 
 def teardown():
     GPIO.cleanup()
-    os.remove(pid_file)
+    try:
+        os.remove(pid_file)
+    except:
+        pass
 
 # main loop
 if __name__ == '__main__':

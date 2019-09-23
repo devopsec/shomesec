@@ -3,10 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <title>shomesec</title>
+
 </head>
 
 <body>
     <h1>Simple Home Security v{{ version }}</h1>
-    <img src="{{ url_for('video_feed') }}">
+    <img src="{{ url_for('video_feed') }}" width="{{ resolution[0] }}" height="{{ resolution[1] }}">
 </body>
+
 </html>

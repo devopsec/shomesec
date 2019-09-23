@@ -1,0 +1,17 @@
+[Unit]
+Description=Video WebServer Service
+After=network.target
+
+[Service]
+Type=simple
+SyslogIdentifier=piserve
+Environment='SHOMESEC_PROJECT_DIR=/opt/shomesec'
+EnvironmentFile=-/etc/default/shomesec/piserve.conf
+PIDFile=/var/run/shomesec/piserve.pid
+ExecStartPre=-/bin/mkdir -p /var/run/shomesec
+ExecStartPre=-/bin/chown -R shomesec:shomesec /var/run/shomesec
+ExecStart=/usr/bin/python3 ${SHOMESEC_PROJECT_DIR}/httpserver/webserver.py runserver
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

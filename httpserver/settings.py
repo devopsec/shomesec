@@ -4,6 +4,7 @@ WEB_HOST = '0.0.0.0'
 WEB_PORT = 10000
 WEB_USER = 'admin'
 WEB_PASS = 'admin'
+WEB_TIMEOUT = 10
 
 # Logging Settings
 # syslog level and facility values based on:
@@ -19,7 +20,7 @@ WEB_SSL_EMAIL = ''
 
 # dSIPRouter internal settings
 VERSION = 0.1
-DEBUG = True
+DEBUG = False
 
 # Database Settings
 DB_HOST = 'localhost'
