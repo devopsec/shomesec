@@ -2,6 +2,22 @@
 
 
 
+### Major Performance Enhancements
+
+> Branches Affected: master  
+> Tags Affected:   
+> Date: Wed, 25 Sep 2019 01:15:19 -0400  
+> Author: Tyler Moore (tmoore@goflyball.com)  
+> Committer: Tyler Moore (tmoore@goflyball.com)  
+
+- tweaks to resolution and buffer sizes
+- optimized stream threading
+- limit to 4 concurrent streams
+
+
+---
+
+
 ### Got Video Streaming working!
 
 > Branches Affected: master  

@@ -1,14 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <title>shomesec</title>
-
 </head>
 
 <body>
     <h1>Simple Home Security v{{ version }}</h1>
-    <img src="{{ url_for('video_feed') }}" width="{{ resolution[0] }}" height="{{ resolution[1] }}">
+      <div style="display: flex; flex-wrap: wrap; padding: 2px;">
+      {% for i in range(0, numsensors) %}
+        <img src="{{ url_for('video_feed', sensor_number=i) }}" width="{{ resolution[0] }}" height="{{ resolution[1] }}">
+      {% endfor %}
+      </div>
 </body>
 
 </html>

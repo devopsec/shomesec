@@ -18,17 +18,18 @@ EOI = b'\xff\xd9'
 #### server settings
 # TODO: move to settings.py
 pid_file = '/var/run/shomesec/piserve.pid'
-video_resolution = (1920,1080)  # resolution in pixels
-video_fps = 30  # frames per second
-buffsize = 4096
-# TODO: create protocol to automatically add pi cams (send id and host, etc..)
-host = "192.168.1.2"
-port = 10000
+video_resolution = (1640,1232)  # resolution in pixels
+video_fps = 40  # frames per second
+buffsize = 16384
+# TODO: create protocol to automatically add pi cams (host, port)
+pisensors_port = 10001 # port to listen for additional sensors
 
 
 #### module variables
 active_socks = {} # { session_id: { request_id: [ socks ] } }
-app = CustomFlask(__name__, static_folder="./static", static_url_path="/static", session_interface=CustomSessionInterface(cleanupSessionSocks, active_socks=active_socks))
+active_pisensors = [("192.168.1.2", 10000)] # [ (host, port) ]
+app = CustomFlask(__name__, static_folder="./static", static_url_path="/static",
+                  session_interface=CustomSessionInterface(cleanupSessionSocks, active_socks=active_socks))
 app_manager = Manager(app, with_default_commands=False)
 # db = loadSession()
 
@@ -57,7 +58,7 @@ def index():
 
         # if not session.get('logged_in'):
         #     checkDatabase()
-        return render_template('index.html', version=settings.VERSION, resolution=video_resolution)
+        return render_template('index.html', version=settings.VERSION, resolution=video_resolution, numsensors=len(active_pisensors))
 
     # except sql_exceptions.SQLAlchemyError as ex:
     #     debugException(ex, log_ex=False, print_ex=True, showstack=False)
@@ -110,16 +111,25 @@ def video_feed():
     # IO.printdbg('session id: {}'.format(session['id']))
     # IO.printdbg('request id: {}'.format(request.id))
 
-    # connect to raspi video server
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    sock.connect((host, port))
+    sensor_number = request.args.get('sensor_number', default=0, type=int)
 
-    # store sock locally
+    # create entry in active_socks for session/request
     if session['id'] not in active_socks:
         active_socks[session['id']] = {}
     if not request.id in active_socks[session['id']]:
         active_socks[session['id']][request.id] = []
+
+    # connect to raspi video server on each sensor
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+    try:
+        sock.connect(active_pisensors[sensor_number])
+    except (socket.error, TypeError) as ex:
+        IO.printerr('Could not connection to sensor [{}]: {}'.format(str(active_pisensors[sensor_number]), str(ex)))
+        return Response()
+
+    # store sock locally
     active_socks[session['id']][request.id].append(sock)
 
     return Response(generateVideoFrames(sock, session['id'], request.id),
