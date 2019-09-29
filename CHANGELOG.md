@@ -2,6 +2,19 @@
 
 
 
+### Update requirements and add Contributing.md
+
+> Branches Affected: master  
+> Tags Affected:   
+> Date: Sun, 29 Sep 2019 15:55:31 -0400  
+> Author: Tyler Moore (tmoore@goflyball.com)  
+> Committer: Tyler Moore (tmoore@goflyball.com)  
+
+
+
+---
+
+
 ### Performance Enhancements
 
 > Branches Affected: master  
