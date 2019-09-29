@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import socket, weakref, signal, picamera, os, select
+import socket, weakref, signal, picamera, os, select, inspect
 from datetime import datetime
 from time import sleep
 from util.decorator import async_thread
@@ -21,7 +21,6 @@ host = "0.0.0.0"
 port = 10000
 
 
-# function definitions
 def sigHandler(signum=None, frame=None):
     # note: we are only recording to file on output 0
     # start recording
@@ -51,34 +50,93 @@ def setup():
     with open(pid_file, 'w') as pidfd:
         pidfd.write(str(os.getpid()))
 
-# class definitions
-class SplitOutput(object):
+
+class StreamingOutput(object):
+    """
+    Streams output socket conditionally
+    Automatically closes socket stream on early termination
+    """
+
+    _active_streams = 0
+
+    def __init__(self, sock=None, streaming=True, buff=None):
+        self.output_stream = None
+
+        if buff and buff > 0:
+            if sock is not None:
+                self.output_stream = sock.makefile('wb', buffering=buff)
+                StreamingOutput.setActiveStreams(StreamingOutput.getActiveStreams() + 1)
+        else:
+            if sock is not None:
+                self.output_stream = sock.makefile('wb')
+                StreamingOutput.setActiveStreams(StreamingOutput.getActiveStreams() + 1)
+
+        self.streaming = streaming
+
+    @classmethod
+    def getActiveStreams(cls):
+        super_class = cls.mro()[1]
+        if not super_class.__name__ == 'object':
+            return super_class.getActiveStreams()
+        else:
+            return cls._active_streams
+
+    @classmethod
+    def setActiveStreams(cls, value):
+        super_class = cls.mro()[1]
+        if not super_class.__name__ == 'object':
+            super_class.setActiveStreams(value)
+        else:
+            cls._active_streams = value
+
+    def setSock(self, sock, buff=None, streaming=True):
+        if self.output_stream:
+            self.output_stream.close()
+        else:
+            StreamingOutput.setActiveStreams(StreamingOutput.getActiveStreams() + 1)
+        if buff and buff > 0:
+            self.output_stream = sock.makefile('wb', buffering=buff)
+        else:
+            self.output_stream = sock.makefile('wb')
+        self.streaming = streaming
+
+    def write(self, buff):
+        if self.output_stream and self.streaming:
+            try:
+                self.output_stream.write(buff)
+            except BrokenPipeError:
+                self.output_stream.close()
+                self.streaming = False
+                StreamingOutput.setActiveStreams(StreamingOutput.getActiveStreams() - 1)
+
+    def flush(self):
+        if self.output_stream and self.streaming:
+            self.output_stream.flush()
+
+    def close(self):
+        if self.output_stream:
+            self.output_stream.close()
+            self.streaming = False
+            StreamingOutput.setActiveStreams(StreamingOutput.getActiveStreams() - 1)
+
+class SplitOutput(StreamingOutput):
     """
     Splits output to a file and a socket
     Automatically closes socket stream on early termination
     """
 
-    active_streams = 0
-
     def __init__(self, filename='', sock=None, recording=True, streaming=True, buff=None):
         self.output_file = None
-        self.output_stream = None
 
         if buff and buff > 0:
             if len(filename) > 0:
                 self.output_file = open(filename, 'wb', buffering=buff)
-            if sock is not None:
-                self.output_stream = sock.makefile('wb', buffering=buff)
-                SplitOutput.active_streams += 1
         else:
             if len(filename) > 0:
                 self.output_file = open(filename, 'wb')
-            if sock is not None:
-                self.output_stream = sock.makefile('wb')
-                SplitOutput.active_streams += 1
 
         self.recording = recording
-        self.streaming = streaming
+        super().__init__(sock, streaming, buff)
 
     def setFile(self, filename, buff=None, recording=True):
         if buff and buff > 0:
@@ -91,17 +149,6 @@ class SplitOutput(object):
         self.output_file = open(filename, 'wb', buffering=buffsiz)
         self.recording = recording
 
-    def setSock(self, sock, buff=None, streaming=True):
-        if self.output_stream:
-            self.output_stream.close()
-        else:
-            SplitOutput.active_streams += 1
-        if buff and buff > 0:
-            self.output_stream = sock.makefile('wb', buffering=buff)
-        else:
-            self.output_stream = sock.makefile('wb')
-        self.streaming = streaming
-
     def write(self, buff):
         if self.output_file and self.recording:
             try:
@@ -109,28 +156,18 @@ class SplitOutput(object):
             except ValueError:
                 self.output_file = None
                 self.recording = False
-        if self.output_stream and self.streaming:
-            try:
-                self.output_stream.write(buff)
-            except BrokenPipeError:
-                self.output_stream.close()
-                self.streaming = False
-                SplitOutput.active_streams -= 1
+        super().write(buff)
 
     def flush(self):
         if self.output_file and self.recording:
             self.output_file.flush()
-        if self.output_stream and self.streaming:
-            self.output_stream.flush()
+        super().flush()
 
     def close(self):
         if self.output_file:
             self.output_file.close()
             self.recording = False
-        if self.output_stream:
-            self.output_stream.close()
-            self.streaming = False
-            SplitOutput.active_streams -= 1
+        super().close()
 
 class Server(object):
     def __init__(self, host, port):
@@ -142,12 +179,11 @@ class Server(object):
         self.port = port
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        # self.video_output = SplitOutput(video_current, recording=False, streaming=False, buff=buffsize)
         self.video_outputs = [
             SplitOutput(video_current, recording=False, streaming=False, buff=buffsize),
-            SplitOutput(recording=False, streaming=False, buff=buffsize),
-            SplitOutput(recording=False, streaming=False, buff=buffsize),
-            SplitOutput(recording=False, streaming=False, buff=buffsize)
+            StreamingOutput(streaming=False, buff=buffsize),
+            StreamingOutput(streaming=False, buff=buffsize),
+            StreamingOutput(streaming=False, buff=buffsize),
         ]
         self.camera = picamera.PiCamera(resolution=video_resolution, framerate=video_fps)
         self._finalizer = weakref.finalize(self, self.close)
@@ -158,7 +194,6 @@ class Server(object):
         """
  
         self.sock.close()
-        # self.video_output.close()
         for i in range(len(self.video_outputs)):
             self.video_outputs[i].close()
 
@@ -177,8 +212,11 @@ class Server(object):
         self.sock.listen(maxconns)
         print("Listening on {}".format(str(self.sock.getsockname())))
 
-        for i in range(len(self.video_outputs)):
-            self.camera.start_recording(self.video_outputs[i], format='mjpeg', splitter_port=i)
+        # for i in range(len(self.video_outputs)):
+        #     self.camera.start_recording(self.video_outputs[i], format='mjpeg', splitter_port=i)
+
+        # the first camera output must always be recording in case we get a signal to output to file
+        self.camera.start_recording(self.video_outputs[0], format='mjpeg', splitter_port=0)
 
         while True:
             conn, addr = self.sock.accept()
@@ -186,34 +224,56 @@ class Server(object):
 
     @async_thread
     def connHandler(self, conn, addr):
+        print("Connection from {} opened".format(addr))
+
+        # if active streams is 0 use the tell the camera thread to handle it with split output
+        active_streams = SplitOutput.getActiveStreams()
+        print('active streams: {}'.format(active_streams))
+
         try:
-            print("Connection from {} opened".format(addr))
+            if active_streams  == 0:
+                self.video_outputs[0].setSock(conn, buff=buffsize)
 
-            # TODO: need to keep track of available socks and split output to all of them
-            # self.video_output.addSock(conn, buff=buffsize)
-            self.video_outputs[SplitOutput.active_streams].setSock(conn, buff=buffsize)
-            
-            # while True:
-            #     print("Camera is recording: {}".format(self.camera.recording))
-            #     sleep(video_timeout)
-            #     readable, writable, exceptional = select.select((conn,), (conn,), (), 0)
-            #     # DEBUG:
-            #     print('readable: ', end='');print(readable);print('writeable: ', end='');print(writable)
-            #
-            #     if writable[0].getpeername():
-            #         pass
+            # otherwise we need to handle recording with this new thread
+            else:
+                self.video_outputs[active_streams].setSock(conn, buff=buffsize)
+                self.camera.start_recording(self.video_outputs[active_streams], format='mjpeg', splitter_port=active_streams)
+                while True:
+                    sleep(video_timeout)
+                    if not self.video_outputs[active_streams].streaming:
+                        self.camera.stop_recording(splitter_port=active_streams)
+                        break
 
-        except (BrokenPipeError,OSError,select.error,IndexError) as ex:
-            print('Disconnect from [{}]: {}'.format(addr, str(ex)))
-        except Exception as ex:
+        except (BrokenPipeError, OSError, IndexError) as ex:
             print("Problem handling request from [{}]: {}".format(addr, str(ex)))
-            # inform client and properly close on error
+            # inform client to properly close
             try:
                 conn.shutdown(socket.SHUT_RDWR)
             except:
                 pass
         finally:
+            print('Connection from {} closed'.format(addr))
             conn.close()
+
+            # readable, writable, exceptional = select.select((conn,), (conn,), (), 0)
+            # # DEBUG:
+            # print('readable: ', end='');print(readable);print('writeable: ', end='');print(writable)
+            #
+            # if writable[0].getpeername():
+            #     pass
+
+        # except (BrokenPipeError,OSError,select.error,IndexError) as ex:
+        #     print('Disconnect from [{}]: {}'.format(addr, str(ex)))
+        # except Exception as ex:
+        #     print("Problem handling request from [{}]: {}".format(addr, str(ex)))
+        # finally:
+        #     print('Connection from {} closed'.format(addr))
+        #     # inform client to properly close
+        #     try:
+        #         conn.shutdown(socket.SHUT_RDWR)
+        #     except:
+        #         pass
+        #     conn.close()
 
 
 if __name__ == "__main__":

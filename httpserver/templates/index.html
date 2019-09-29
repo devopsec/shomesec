@@ -7,12 +7,37 @@
 </head>
 
 <body>
-    <h1>Simple Home Security v{{ version }}</h1>
-      <div style="display: flex; flex-wrap: wrap; padding: 2px;">
-      {% for i in range(0, numsensors) %}
-        <img src="{{ url_for('video_feed', sensor_number=i) }}" width="{{ resolution[0] }}" height="{{ resolution[1] }}">
-      {% endfor %}
-      </div>
+<h1>Simple Home Security v{{ version }}</h1>
+<div style="display: flex; flex-wrap: wrap; padding: 2px;">
+  {% for i in range(0, numsensors) %}
+  <img src="{{ url_for('video_feed', sensor_number=i) }}" width="{{ resolution[0] }}" height="{{ resolution[1] }}">
+  {% endfor %}
+</div>
 </body>
+
+<script
+    src="https://code.jquery.com/jquery-3.4.1.min.js"
+    integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo="
+    crossorigin="anonymous">
+</script>
+
+<script type="text/javascript">
+  $(window).on("load", function() {
+    var css = 'img { \
+      background-image: url("{{ url_for("static", filename="images/out_of_order.png") }}"); \
+      background-repeat: no-repeat; \
+      background-size: auto; \
+    }';
+    var head = document.head || document.getElementsByTagName('head')[0];
+    var style = document.createElement('style');
+    style.type = 'text/css';
+    head.appendChild(style);
+    if (style.styleSheet) {
+      style.styleSheet.cssText = css;
+    } else {
+      style.appendChild(document.createTextNode(css));
+    }
+  });
+</script>
 
 </html>

@@ -2,6 +2,21 @@
 
 
 
+### Performance Enhancements
+
+> Branches Affected: master  
+> Tags Affected:   
+> Date: Sun, 29 Sep 2019 00:09:10 -0400  
+> Author: Tyler Moore (tmoore@goflyball.com)  
+> Committer: Tyler Moore (tmoore@goflyball.com)  
+
+- stopped recording threads when not in use
+- used simplified streaming output where possible
+
+
+---
+
+
 ### Major Performance Enhancements
 
 > Branches Affected: master  
