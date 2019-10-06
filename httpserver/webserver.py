@@ -1,4 +1,4 @@
-import os, sys, socket, subprocess, signal, logging, datetime, uuid
+import os, sys, socket, signal, logging, datetime, uuid, json
 from copy import copy
 from importlib import reload
 from flask import render_template, request, redirect, session, url_for, Response, send_from_directory
@@ -134,6 +134,11 @@ def video_feed():
 
     return Response(generateVideoFrames(sock, session['id'], request.id),
                     mimetype='multipart/x-mixed-replace; boundary=frame')
+
+@app.route('/info')
+def showError():
+    info = {'active_sensors': active_pisensors}
+    return json.dumps(info), 200
 
 @app.route('/favicon.ico')
 def favicon():

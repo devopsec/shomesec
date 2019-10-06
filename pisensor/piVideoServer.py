@@ -226,11 +226,11 @@ class Server(object):
     def connHandler(self, conn, addr):
         print("Connection from {} opened".format(addr))
 
-        # if active streams is 0 use the tell the camera thread to handle it with split output
         active_streams = SplitOutput.getActiveStreams()
         print('active streams: {}'.format(active_streams))
 
         try:
+            # if active streams is 0 use the tell the camera thread to handle it with split output
             if active_streams  == 0:
                 self.video_outputs[0].setSock(conn, buff=buffsize)
 

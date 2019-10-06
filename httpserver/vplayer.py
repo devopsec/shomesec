@@ -7,6 +7,17 @@ buffsize = 16384
 host = "192.168.1.2"
 port = 10000
 
+# video cam to connect to
+video_sensor = 0
+
+# http request to video server
+request = b'GET /video_feed?sensor_number=0 HTTP/1.1\r\n' + \
+    'Host: {}:{}\r\n'.format(host,str(port)).encode() + \
+    b'Connection: keep-alive\r\n' + \
+    b'DNT: 1\r\n' + \
+    b'Accept: image/webp,image/apng,image/*,*/*;q=0.8\r\n\r\n'
+
+
 # connect to raspi video server
 sock = socket.socket()
 sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -26,6 +37,9 @@ if __name__ == '__main__':
             '-demuxer', 'lavf', '-'
         ]
         player = subprocess.Popen(cmdline, stdin=subprocess.PIPE)
+
+        sock.send(request)
+
         while True:
             data = stream.read(buffsize)
             if not data:

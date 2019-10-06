@@ -2,6 +2,21 @@
 
 
 
+### Add support for vplayer app to connect to webserver
+
+> Branches Affected: master  
+> Tags Affected:   
+> Date: Sat, 5 Oct 2019 22:56:03 -0400  
+> Author: Tyler Moore (tmoore@goflyball.com)  
+> Committer: Tyler Moore (tmoore@goflyball.com)  
+
+- add vplayer request to connect to webserver directly
+- add info route to get active sensors from webserver
+
+
+---
+
+
 ### Update requirements and add Contributing.md
 
 > Branches Affected: master  
