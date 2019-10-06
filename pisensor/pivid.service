@@ -10,7 +10,7 @@ EnvironmentFile=-/etc/default/shomesec/pivid.conf
 PIDFile=/var/run/shomesec/pivid.pid
 ExecStartPre=-/bin/mkdir -p /var/run/shomesec
 ExecStartPre=-/bin/chown -R shomesec:shomesec /var/run/shomesec
-ExecStart=/usr/bin/python3 ${SHOMESEC_PROJECT_DIR}/pisensor/piVideoServer.py
+ExecStart=/usr/bin/python3 ${SHOMESEC_PROJECT_DIR}/pisensor/videoserver.py
 Restart=on-failure
 
 [Install]

@@ -3,7 +3,7 @@
 import socket, weakref, signal, picamera, os, select, inspect
 from datetime import datetime
 from time import sleep
-from util.decorator import async_thread
+from util.async import thread
 
 
 # TODO: move to a settings.py file
@@ -222,7 +222,7 @@ class Server(object):
             conn, addr = self.sock.accept()
             self.connHandler(conn, addr)
 
-    @async_thread
+    @thread
     def connHandler(self, conn, addr):
         print("Connection from {} opened".format(addr))
 

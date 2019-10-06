@@ -3,12 +3,28 @@ from email import encoders
 from email.mime.base import MIMEBase
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from util.decorator import async
+from util.async import thread
 from util.printing import debugException
+import phonenumbers
 
-@async
+CARRIER_SMS_GATEWAYS = {
+    'alltel':       '@mms.alltelwireless.com',
+    'att':          '@mms.att.net',
+    'tmobile':      '@tmomail.net',
+    'verizon':      '@vtext.com',
+    'sprint':       '@pm.sprint.com',
+    'boost':        '@myboostmobile.com',
+    'cricket':      '@mms.cricketwireless.net',
+    'metro':        '@mymetropcs.com',
+    'tracfone':     '@mmst5.tracfone.com',
+    'uscellular':   '@mms.uscc.net',
+    'virgin':       '@@vmpix.com',
+    'straighttalk': '@mypixmessages.com'
+}
+
+@thread
 def sendEmail(recipients, text_body, html_body=None, subject=settings.MAIL_DEFAULT_SUBJECT,
-               sender=settings.MAIL_DEFAULT_SENDER, data=None, attachments=[]):
+               sender=settings.MAIL_DEFAULT_SENDER, data=None, attachments=()):
     """
     Send an Email asynchronously to recipients
     :param recipients:  list
@@ -66,3 +82,32 @@ def sendEmail(recipients, text_body, html_body=None, subject=settings.MAIL_DEFAU
 
     except Exception as ex:
         debugException(ex, log_ex=False, print_ex=True, showstack=False)
+
+def sendSMS(recipients, text_body, html_body=None, subject=settings.MAIL_DEFAULT_SUBJECT,
+               sender=settings.MAIL_DEFAULT_SENDER, data=None, attachments=(), carrier=settings.SMS_DEFAULT_CARRIER):
+    """
+    Send an SMS Message asynchronously to recipients
+    :param recipients:  list
+    :param text_body:   str
+    :param html_body:   str
+    :param subject:     str
+    :param sender:      str
+    :param data:        dict
+    :param attachments: list
+    :param carrier:     str
+    :return:            None
+    """
+
+    # TODO: find free service for carrier lookups by number
+    # possible paid lookup services:
+    # https://www.twilio.com/docs/lookup/api
+    # https://www.data247.com/services/carrier247USA
+
+    sms_gateway = CARRIER_SMS_GATEWAYS[carrier]
+
+    recipients_formatted = []
+    for i in range(len(recipients)):
+        number = str(phonenumbers.parse(recipients[i], 'US').national_number)
+        recipients_formatted.append(number + sms_gateway)
+
+    sendEmail(recipients_formatted, text_body, html_body, subject, sender, data, attachments)

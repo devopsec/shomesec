@@ -10,7 +10,7 @@ EnvironmentFile=-/etc/default/shomesec/pisense.conf
 PIDFile=/var/run/shomesec/pisense.pid
 ExecStartPre=-/bin/mkdir -p /var/run/shomesec
 ExecStartPre=-/bin/chown -R shomesec:shomesec /var/run/shomesec
-ExecStart=/usr/bin/python3 ${SHOMESEC_PROJECT_DIR}/pisensor/piSecuritySensor.py
+ExecStart=/usr/bin/python3 ${SHOMESEC_PROJECT_DIR}/pisensor/securitysensor.py
 Restart=on-failure
 
 [Install]

@@ -41,13 +41,3 @@ SQLALCHEMY_SQL_DEBUG = False
 
 # upload folder for files
 UPLOAD_FOLDER = '/tmp'
-
-# Email Server Settings
-MAIL_SERVER = 'smtp.gmail.com'
-MAIL_PORT = 587
-MAIL_USE_TLS = True
-MAIL_USERNAME = ''
-MAIL_PASSWORD = ''
-MAIL_ASCII_ATTACHMENTS = False
-MAIL_DEFAULT_SENDER = 'dSIPRouter {}'.format(MAIL_USERNAME)
-MAIL_DEFAULT_SUBJECT = "dSIPRouter System Notification"

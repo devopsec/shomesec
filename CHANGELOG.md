@@ -2,6 +2,22 @@
 
 
 
+### Feature Updates
+
+> Branches Affected: master  
+> Tags Affected:   
+> Date: Sun, 6 Oct 2019 16:13:28 -0400  
+> Author: Tyler Moore (tmoore@goflyball.com)  
+> Committer: Tyler Moore (tmoore@goflyball.com)  
+
+- add email and sms notifications when alarm triggered
+- add process and thread pooling functinos
+- move each python modules resources into cleaner organization
+
+
+---
+
+
 ### Add support for vplayer app to connect to webserver
 
 > Branches Affected: master  

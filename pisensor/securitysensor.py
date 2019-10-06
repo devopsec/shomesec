@@ -2,6 +2,8 @@ from time import sleep
 from datetime import datetime, time
 import os, sys, socket, signal
 import RPi.GPIO as GPIO
+import settings
+from util.notifications import sendEmail, sendSMS
 
 #### app settings
 debug = True
@@ -38,8 +40,17 @@ GPIO.setup(window, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 
 #### function definitions
 def sigHandler(signum=None, frame=None):
+    global alarm_active
+
     if signum == signal.SIGALRM.value:
-        pass
+        alarm_active = True
+        print("alarm triggered")
+
+        text_msg = 'Your Alarm was Triggered at {}'.format(str(datetime.now()))
+        html_msg = ('<html><head><style>.error{{border: 1px solid; margin: 10px 0px; padding: 15px 10px 15px 50px; background-color: #FF5555;}}</style></head>'
+                    '<body><div class="error"><strong>{}</strong></div></body>').format(text_msg)
+        sendEmail(settings.ALARM_NOTIFY_EMAILS, text_msg, html_msg)
+        sendSMS(settings.ALARM_NOTIFY_NUMBERS, text_msg, html_msg)
 
 def record():
     try:
@@ -88,6 +99,8 @@ def setup():
     # create pid file
     with open(pid_file, 'w') as pidfd:
         pidfd.write(str(os.getpid()))
+    # catch signals
+    signal.signal(signal.SIGALRM, sigHandler)
 
 def teardown():
     GPIO.cleanup()
@@ -96,33 +109,37 @@ def teardown():
     except:
         pass
 
+def main():
+    global alarm_active
+
+    print("stabalizing sensors")
+    sleep(3)
+
+    while True:
+        # door opening checks for alarm
+        if not GPIO.input(door):
+            print("door opened")
+            if alarm_enabled:
+                # trigger alarm once until disarmed
+                if not alarm_active:
+                    os.kill(os.getpid(), signal.SIGALRM)
+
+        # motion activates video recording to file
+        if GPIO.input(motion):
+            print("detected movement")
+            setIR()
+            record()
+        else:
+            print("no movement")
+            norecord()
+
+        # delay between checks
+        sleep(loop_delay)
+
 #### main loop
 if __name__ == '__main__':
     try:
         setup()
-
-        print("stabalizing sensors")
-        sleep(3)
-
-        while True:
-            # door opening checks for alarm
-            if not GPIO.input(door):
-                print("door opened")
-                if alarm_enabled:
-                    alarm_active = True
-                    print("alarm triggered")
-
-            # motion activates video recording to file
-            if GPIO.input(motion):
-                print("detected movement")
-                setIR()
-                record()
-            else:
-                print("no movement")
-                norecord()
-
-            # delay between checks
-            sleep(loop_delay)
-
+        main()
     finally:
         teardown()
