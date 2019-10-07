@@ -1,4 +1,6 @@
-import os, sys, socket, signal, logging, datetime, uuid, json
+#!/usr/bin/env python3
+
+import os, sys, socket, signal, logging, datetime, uuid, json, weakref, struct
 from copy import copy
 from importlib import reload
 from flask import render_template, request, redirect, session, url_for, Response, send_from_directory
@@ -20,14 +22,15 @@ EOI = b'\xff\xd9'
 pid_file = '/var/run/shomesec/piserve.pid'
 video_resolution = (1640,1232)  # resolution in pixels
 video_fps = 40  # frames per second
-buffsize = 16384
+video_buffsize = 16384
+sensor_buffsize = 4096
 # TODO: create protocol to automatically add pi cams (host, port)
-pisensors_port = 10001 # port to listen for additional sensors
+
 
 
 #### module variables
 active_socks = {} # { session_id: { request_id: [ socks ] } }
-active_pisensors = [("192.168.1.2", 10000)] # [ (host, port) ]
+active_pisensors = {} # { sensor_id: (host, port) }
 app = CustomFlask(__name__, static_folder="./static", static_url_path="/static",
                   session_interface=CustomSessionInterface(cleanupSessionSocks, active_socks=active_socks))
 app_manager = Manager(app, with_default_commands=False)
@@ -58,7 +61,7 @@ def index():
 
         # if not session.get('logged_in'):
         #     checkDatabase()
-        return render_template('index.html', version=settings.VERSION, resolution=video_resolution, numsensors=len(active_pisensors))
+        return render_template('index.html', version=settings.VERSION, resolution=video_resolution, sensors=active_pisensors.keys())
 
     # except sql_exceptions.SQLAlchemyError as ex:
     #     debugException(ex, log_ex=False, print_ex=True, showstack=False)
@@ -78,7 +81,7 @@ def index():
 
 # this functions will continue to stream after the request context is gone
 def generateVideoFrames(sock, session_id, request_id):
-    stream = sock.makefile('rb', buffsize)
+    stream = sock.makefile('rb', video_buffsize)
     buff = b''
 
     # IO.printdbg('active_socks: {}'.format(str(active_socks)))
@@ -87,7 +90,7 @@ def generateVideoFrames(sock, session_id, request_id):
 
     try:
         while True:
-            data = stream.read(buffsize)
+            data = stream.read(video_buffsize)
             # IO.printdbg('len(data): {}'.format(len(buff)))
 
             if len(data) == 0:
@@ -111,7 +114,7 @@ def video_feed():
     # IO.printdbg('session id: {}'.format(session['id']))
     # IO.printdbg('request id: {}'.format(request.id))
 
-    sensor_number = request.args.get('sensor_number', default=0, type=int)
+    sensor_id = request.args.get('sensor_id', default='', type=str)
 
     # create entry in active_socks for session/request
     if session['id'] not in active_socks:
@@ -124,9 +127,11 @@ def video_feed():
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
     try:
-        sock.connect(active_pisensors[sensor_number])
+        sock.connect(active_pisensors[sensor_id])
     except (socket.error, TypeError) as ex:
-        IO.printerr('Could not connection to sensor [{}]: {}'.format(str(active_pisensors[sensor_number]), str(ex)))
+        IO.printerr('Could not connection to sensor [{}]: {}'.format(str(active_pisensors[sensor_id]), str(ex)))
+        if sensor_id in active_pisensors:
+            del active_pisensors[sensor_id]
         return Response()
 
     # store sock locally
@@ -136,8 +141,10 @@ def video_feed():
                     mimetype='multipart/x-mixed-replace; boundary=frame')
 
 @app.route('/info')
-def showError():
-    info = {'active_sensors': active_pisensors}
+def showInfo():
+    info = {
+        'active_sensors': active_pisensors
+    }
     return json.dumps(info), 200
 
 @app.route('/favicon.ico')
@@ -177,6 +184,65 @@ def replaceAppLoggers(log_handler):
     logging.getLogger('sqlalchemy.pool').setLevel(settings.WEB_LOG_LEVEL)
     logging.getLogger('sqlalchemy.orm').addHandler(log_handler)
     logging.getLogger('sqlalchemy.orm').setLevel(settings.WEB_LOG_LEVEL)
+
+class SocketServer(object):
+    def __init__(self, host, port):
+        """
+        Server initialization and socket creation
+        """
+
+        self.host = host
+        self.port = port
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self._finalizer = weakref.finalize(self, self.close)
+
+    def close(self):
+        """
+        Close socket and cleanup
+        """
+
+        self.sock.close()
+
+    @thread
+    def start(self):
+        """
+        Start listening for connections
+        """
+
+        self.sock.bind((self.host, self.port))
+        self.sock.listen()
+        print("Listening on {}".format(str(self.sock.getsockname())))
+
+        while True:
+            conn, addr = self.sock.accept()
+            self.connHandler(conn, addr)
+
+    def connHandler(self, conn, addr):
+        print("Connection from {} opened".format(addr))
+
+        try:
+            # handle node synchronization request
+            sensor_info = struct.unpack('<64s16si', conn.recv(sensor_buffsize))
+            id = sensor_info[0].decode('utf-8')
+            host = sensor_info[1].decode('utf-8').rstrip('\x00')
+            port = sensor_info[2]
+
+            if not id in active_pisensors:
+                active_pisensors[id] = (host, port)
+                print('active sensors: ', end=''); print(active_pisensors)
+
+
+        except (BrokenPipeError, OSError, struct.error) as ex:
+            print("Problem handling request from [{}]: {}".format(addr, str(ex)))
+            # inform client to properly close
+            try:
+                conn.shutdown(socket.SHUT_RDWR)
+            except:
+                pass
+        finally:
+            print('Connection from {} closed'.format(addr))
+            conn.close()
 
 def initApp(flask_app):
     # Setup the Flask session manager with a random secret key
@@ -244,6 +310,7 @@ if __name__ == '__main__':
     try:
         with open(pid_file, 'w') as pidfd:
             pidfd.write(str(os.getpid()))
+        SocketServer(settings.NODESYNC_HOST, settings.NODESYNC_PORT).start()
         initApp(app)
     except Exception as ex:
         print("Server Error: {}".format(str(ex)))

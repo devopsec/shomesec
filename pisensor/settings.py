@@ -12,3 +12,12 @@ MAIL_ASCII_ATTACHMENTS = False
 MAIL_DEFAULT_SENDER = '{}@{}'.format(MAIL_USERNAME, MAIL_SERVER)
 MAIL_DEFAULT_SUBJECT = "Simple Home Security System Notification"
 SMS_DEFAULT_CARRIER = 'verizon'
+
+# settings for node sync server
+NODESYNC_HOST = '192.168.1.69'
+NODESYNC_PORT = 10001
+NODESYNC_DELAY = 60
+
+# settings for video server
+VIDEO_HOST = "0.0.0.0"
+VIDEO_PORT = 10000

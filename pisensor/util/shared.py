@@ -1,4 +1,4 @@
-import re, inspect, string, random
+import re, inspect, socket
 
 def objToDict(obj):
     """
@@ -65,9 +65,8 @@ def stripDictVals(d):
             d[key] = int(str(val).strip())
     return d
 
-def generateID(size=10, chars=string.ascii_lowercase + string.ascii_uppercase + string.digits):
-    return ''.join(random.choice(chars) for _ in range(size))
-
-
-def generatePassword(size=10, chars=string.ascii_lowercase + string.ascii_uppercase + string.digits):
-    return ''.join(random.choice(chars) for _ in range(size))
+def getInternalIP():
+    """ Returns current ip of system """
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+        s.connect(("8.8.8.8", 80))
+        return s.getsockname()[0]

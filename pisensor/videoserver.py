@@ -4,6 +4,7 @@ import socket, weakref, signal, picamera, os, select, inspect
 from datetime import datetime
 from time import sleep
 from util.async import thread
+import settings
 
 
 # TODO: move to a settings.py file
@@ -17,8 +18,6 @@ video_timeout = 5 # timeout before recording dies (if no writes)
 # capped at 4 because thats the max number of splitter ports
 maxconns = 4
 buffsize = 16384
-host = "0.0.0.0"
-port = 10000
 
 
 def sigHandler(signum=None, frame=None):
@@ -277,12 +276,11 @@ class Server(object):
 
 
 if __name__ == "__main__":
-    signal.signal(signal.SIGUSR1, sigHandler)
-    signal.signal(signal.SIGUSR2, sigHandler)
-
     try:
         setup()
-        server = Server(host, port)
+        server = Server(settings.VIDEO_HOST, settings.VIDEO_PORT)
+        signal.signal(signal.SIGUSR1, sigHandler)
+        signal.signal(signal.SIGUSR2, sigHandler)
         server.start()
     except Exception as ex:
         print("Server Error: {}".format(str(ex)))

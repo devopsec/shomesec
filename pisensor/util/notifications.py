@@ -111,3 +111,7 @@ def sendSMS(recipients, text_body, html_body=None, subject=settings.MAIL_DEFAULT
         recipients_formatted.append(number + sms_gateway)
 
     sendEmail(recipients_formatted, text_body, html_body, subject, sender, data, attachments)
+
+# TODO add support for APN and GCM push notifcations
+# https://github.com/dgilland/pushjack
+# https://pushjack.readthedocs.io/en/latest/

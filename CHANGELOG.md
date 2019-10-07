@@ -2,6 +2,20 @@
 
 
 
+### Automatic Node Synchronization
+
+> Branches Affected: master  
+> Tags Affected:   
+> Date: Sun, 6 Oct 2019 20:35:21 -0400  
+> Author: Tyler Moore (tmoore@goflyball.com)  
+> Committer: Tyler Moore (tmoore@goflyball.com)  
+
+- add support for auto joining sensors to cluster
+
+
+---
+
+
 ### Feature Updates
 
 > Branches Affected: master  

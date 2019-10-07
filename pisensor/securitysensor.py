@@ -1,9 +1,15 @@
+#!/usr/bin/env python3
+
 from time import sleep
 from datetime import datetime, time
-import os, sys, socket, signal
+import os, sys, socket, signal, struct, hashlib, binascii
 import RPi.GPIO as GPIO
 import settings
+from util.async import proc
 from util.notifications import sendEmail, sendSMS
+from util.shared import getInternalIP
+
+# TODO: move to settings.py
 
 #### app settings
 debug = True
@@ -18,11 +24,6 @@ window_sensor_enabled = False
 camera_infrared_disabled = True
 record_timeout = 3 # seconds to record until checking motion sensor
 loop_delay = 1 # time between full sensor checks
-
-#### network settings
-# TODO: create protocol to automatically add pi cams (host, port)
-webserver_host = '192.168.1.64'
-pisensors_port = 10001
 
 #### GPIO pin settings
 motion = 17 # BCM 17 (pin 11)
@@ -95,12 +96,42 @@ def setIR():
             GPIO.output(infrared, GPIO.HIGH)
             print("Camera IR Inactive")
 
+def syncCurrentNode(ip):
+    """send node info to web server"""
+    sock = socket.socket()
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+    try:
+        sock.connect((settings.NODESYNC_HOST, settings.NODESYNC_PORT))
+        req = struct.pack('<64s16si',
+                          binascii.hexlify(hashlib.sha256(bytes(ip+str(settings.VIDEO_PORT), 'utf-8')).digest()),
+                          ip.encode('utf-8'),
+                          settings.VIDEO_PORT)
+        hashlib.sha512()
+        sock.send(req)
+    except Exception:
+        print('Could not connect to web server')
+    finally:
+        sock.close()
+
+@proc
+def runSyncManager(delay):
+    internal_ip = getInternalIP()
+
+    while True:
+        syncCurrentNode(internal_ip)
+        sleep(delay)
+
+
 def setup():
     # create pid file
     with open(pid_file, 'w') as pidfd:
         pidfd.write(str(os.getpid()))
+
     # catch signals
     signal.signal(signal.SIGALRM, sigHandler)
+
+    runSyncManager(settings.NODESYNC_DELAY)
 
 def teardown():
     GPIO.cleanup()

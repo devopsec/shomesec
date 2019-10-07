@@ -41,3 +41,7 @@ SQLALCHEMY_SQL_DEBUG = False
 
 # upload folder for files
 UPLOAD_FOLDER = '/tmp'
+
+# settings for node sync server
+NODESYNC_HOST = '0.0.0.0'
+NODESYNC_PORT = 10001
