@@ -20,7 +20,7 @@ class CustomServer(Server):
             self.ssl_crt = settings.WEB_SSL_CERT
             self.ssl_key = settings.WEB_SSL_KEY
 
-        if settings.DEBUG == True:
+        if settings.SHOMESEC_DEBUG == True:
             self.use_debugger = True
             self.use_reloader = True
         else:
@@ -82,7 +82,7 @@ def cleanupSessionSocks(active_socks, session_id=None):
     else:
         session_id = session['id']
         
-    # DEBUG:
+    # SHOMESEC_DEBUG:
     IO.printwarn('[session] disconnecting socks: {}'.format(str(active_socks[session_id])))
 
     if session_id in active_socks:
@@ -107,7 +107,7 @@ def cleanupRequestSocks(active_socks, session_id=None, request_id=None):
     
     if session_id in active_socks:
         if request_id in active_socks[session_id]:
-            # DEBUG:
+            # SHOMESEC_DEBUG:
             IO.printwarn('[request] disconnecting socks: {}'.format(str(active_socks[session_id][request_id])))
 
             for sock in active_socks[session_id][request_id]:

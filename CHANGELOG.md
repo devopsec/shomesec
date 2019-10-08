@@ -2,6 +2,34 @@
 
 
 
+### Organize Modules and Some Upgrades
+
+> Branches Affected: master  
+> Tags Affected:   
+> Date: Mon, 7 Oct 2019 22:54:00 -0400  
+> Author: Tyler Moore (tmoore@goflyball.com)  
+> Committer: Tyler Moore (tmoore@goflyball.com)  
+
+- update powerpoint to be more readable
+- update inventory lists
+- update module and service names
+- move install script to scripts dir
+- add shared_lib for scripts
+- update install script with current work
+- add placeholders for next modules
+- fix printing format issue with debugException
+- cleanup unused imports and settings
+- update vplayer to accept params
+- update vplayer by cleaning up function calls
+- update README to be semi-useful
+- update modules to not debug keyboard interrupts
+- move webserver settings to settings.py
+- fix run dir does not exist bug
+
+
+---
+
+
 ### Automatic Node Synchronization
 
 > Branches Affected: master  

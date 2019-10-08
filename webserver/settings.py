@@ -18,10 +18,6 @@ WEB_SSL_KEY = ''
 WEB_SSL_CERT = ''
 WEB_SSL_EMAIL = ''
 
-# dSIPRouter internal settings
-VERSION = 0.1
-DEBUG = False
-
 # Database Settings
 DB_HOST = 'localhost'
 # Database Engine Driver to connect with (leave empty for default)
@@ -39,9 +35,16 @@ DB_PASS = 'shomesec'
 SQLALCHEMY_TRACK_MODIFICATIONS = False
 SQLALCHEMY_SQL_DEBUG = False
 
-# upload folder for files
-UPLOAD_FOLDER = '/tmp'
-
-# settings for node sync server
+# Node Sync Server settings
 NODESYNC_HOST = '0.0.0.0'
 NODESYNC_PORT = 10001
+NODESYNC_BUFFSIZE = 4096
+
+# Shomesec App Settings
+SHOMESEC_VERSION = 0.1
+SHOMESEC_DEBUG = False
+SHOMESEC_RUN_DIR = '/var/run/shomesec'
+SHOMESEC_PID_FILE = '/var/run/shomesec/piserve.pid'
+VIDEO_RESOLUTION = (1640,1232)  # resolution in pixels
+VIDEO_FPS = 40  # frames per second
+VIDEO_BUFFSIZE = 16384

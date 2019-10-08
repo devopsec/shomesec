@@ -2,17 +2,19 @@
 
 from time import sleep
 from datetime import datetime, time
-import os, sys, socket, signal, struct, hashlib, binascii
+import os, socket, signal, struct, hashlib, binascii
 import RPi.GPIO as GPIO
 import settings
 from util.async import proc
 from util.notifications import sendEmail, sendSMS
 from util.shared import getInternalIP
+from util.printing import debugException
+
 
 # TODO: move to settings.py
-
 #### app settings
 debug = True
+run_dir = '/var/run/shomesec'
 pid_file = '/var/run/shomesec/pisense.pid'
 pivid_pid_file = '/var/run/shomesec/pivid.pid'
 alarm_enabled = False
@@ -116,6 +118,8 @@ def syncCurrentNode(ip):
 
 @proc
 def runSyncManager(delay):
+    """Run in the background constantly updating web server"""
+
     internal_ip = getInternalIP()
 
     while True:
@@ -125,6 +129,7 @@ def runSyncManager(delay):
 
 def setup():
     # create pid file
+    os.makedirs(run_dir, exist_ok=True)
     with open(pid_file, 'w') as pidfd:
         pidfd.write(str(os.getpid()))
 
@@ -172,5 +177,10 @@ if __name__ == '__main__':
     try:
         setup()
         main()
+    except KeyboardInterrupt:
+        exit(0)
+    except Exception as ex:
+        debugException(ex)
+        exit(1)
     finally:
         teardown()

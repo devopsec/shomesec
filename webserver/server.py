@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 
-import os, sys, socket, signal, logging, datetime, uuid, json, weakref, struct
+import os, socket, signal, logging, datetime, uuid, json, weakref, struct
 from copy import copy
-from importlib import reload
 from flask import render_template, request, redirect, session, url_for, Response, send_from_directory
 from flask_script import Manager
-from util.shared import *
 from util.printing import IO, debugException, debugEndpoint
 from util.async import thread, proc
 from util.flaskcustom import CustomFlask, CustomServer, CustomSessionInterface, cleanupSessionSocks, cleanupRequestSocks
@@ -17,17 +15,6 @@ import settings
 SOI = b'\xff\xd8'
 EOI = b'\xff\xd9'
 
-#### server settings
-# TODO: move to settings.py
-pid_file = '/var/run/shomesec/piserve.pid'
-video_resolution = (1640,1232)  # resolution in pixels
-video_fps = 40  # frames per second
-video_buffsize = 16384
-sensor_buffsize = 4096
-# TODO: create protocol to automatically add pi cams (host, port)
-
-
-
 #### module variables
 active_socks = {} # { session_id: { request_id: [ socks ] } }
 active_pisensors = {} # { sensor_id: (host, port) }
@@ -35,6 +22,7 @@ app = CustomFlask(__name__, static_folder="./static", static_url_path="/static",
                   session_interface=CustomSessionInterface(cleanupSessionSocks, active_socks=active_socks))
 app_manager = Manager(app, with_default_commands=False)
 # db = loadSession()
+
 
 #### routing and app logic
 # @app.before_first_request
@@ -56,12 +44,12 @@ def showError(type="", code=500, msg=None):
 @app.route('/')
 def index():
     try:
-        if (settings.DEBUG):
+        if (settings.SHOMESEC_DEBUG):
             debugEndpoint()
 
         # if not session.get('logged_in'):
         #     checkDatabase()
-        return render_template('index.html', version=settings.VERSION, resolution=video_resolution, sensors=active_pisensors.keys())
+        return render_template('index.html', version=settings.SHOMESEC_VERSION, resolution=settings.VIDEO_RESOLUTION, sensors=active_pisensors.keys())
 
     # except sql_exceptions.SQLAlchemyError as ex:
     #     debugException(ex, log_ex=False, print_ex=True, showstack=False)
@@ -69,7 +57,7 @@ def index():
     #     db.rollback()
     #     db.flush()
     #     db.close()
-    #     return render_template('index.html', version=settings.VERSION)
+    #     return render_template('index.html', version=settings.SHOMESEC_VERSION)
     # except http_exceptions.HTTPException as ex:
     #     debugException(ex, log_ex=False, print_ex=True, showstack=False)
     #     error = "http"
@@ -81,7 +69,7 @@ def index():
 
 # this functions will continue to stream after the request context is gone
 def generateVideoFrames(sock, session_id, request_id):
-    stream = sock.makefile('rb', video_buffsize)
+    stream = sock.makefile('rb', settings.VIDEO_BUFFSIZE)
     buff = b''
 
     # IO.printdbg('active_socks: {}'.format(str(active_socks)))
@@ -90,7 +78,7 @@ def generateVideoFrames(sock, session_id, request_id):
 
     try:
         while True:
-            data = stream.read(video_buffsize)
+            data = stream.read(settings.VIDEO_BUFFSIZE)
             # IO.printdbg('len(data): {}'.format(len(buff)))
 
             if len(data) == 0:
@@ -121,6 +109,8 @@ def video_feed():
         active_socks[session['id']] = {}
     if not request.id in active_socks[session['id']]:
         active_socks[session['id']][request.id] = []
+
+
 
     # connect to raspi video server on each sensor
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -156,7 +146,7 @@ def favicon():
 @app_manager.command
 def version():
     """ Print current version """
-    print(settings.VERSION)
+    print(settings.SHOMESEC_VERSION)
 
 def sigHandler(signum=None, frame=None):
     if signum == signal.SIGHUP.value:
@@ -223,7 +213,7 @@ class SocketServer(object):
 
         try:
             # handle node synchronization request
-            sensor_info = struct.unpack('<64s16si', conn.recv(sensor_buffsize))
+            sensor_info = struct.unpack('<64s16si', conn.recv(settings.NODESYNC_BUFFSIZE))
             id = sensor_info[0].decode('utf-8')
             host = sensor_info[1].decode('utf-8').rstrip('\x00')
             port = sensor_info[2]
@@ -267,8 +257,8 @@ def initApp(flask_app):
     # reload(settings)
 
     # configs depending on updated settings go here
-    flask_app.env = "development" if settings.DEBUG else "production"
-    flask_app.debug = settings.DEBUG
+    flask_app.env = "development" if settings.SHOMESEC_DEBUG else "production"
+    flask_app.debug = settings.SHOMESEC_DEBUG
     flask_app.permanent_session_lifetime = datetime.timedelta(minutes=settings.WEB_TIMEOUT)
 
     # Flask App Manager configs
@@ -277,6 +267,11 @@ def initApp(flask_app):
 
     # trap signals here
     signal.signal(signal.SIGHUP, sigHandler)
+
+    # create pid file
+    os.makedirs(settings.SHOMESEC_RUN_DIR, exist_ok=True)
+    with open(settings.SHOMESEC_PID_FILE, 'w') as pidfd:
+        pidfd.write(str(os.getpid()))
 
     # start the app server
     app_manager.run()
@@ -291,7 +286,7 @@ def teardown():
                     pass
                 sock.close()
     try:
-        os.remove(pid_file)
+        os.remove(settings.SHOMESEC_PID_FILE)
     except:
         pass
 
@@ -308,12 +303,12 @@ def teardown():
 # main loop
 if __name__ == '__main__':
     try:
-        with open(pid_file, 'w') as pidfd:
-            pidfd.write(str(os.getpid()))
         SocketServer(settings.NODESYNC_HOST, settings.NODESYNC_PORT).start()
         initApp(app)
+    except KeyboardInterrupt:
+        exit(0)
     except Exception as ex:
-        print("Server Error: {}".format(str(ex)))
-        raise
+        debugException(ex)
+        exit(1)
     finally:
         teardown()

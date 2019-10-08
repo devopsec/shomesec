@@ -110,7 +110,7 @@ class IO():
             logging.getLogger().log(logging.NOTSET, str(message).strip())
 
 
-def debugException(ex=None, log_ex=True, print_ex=False, showstack=True):
+def debugException(ex=None, log_ex=True, print_ex=True, showstack=False):
     """
     Debugging of an exception: print and/or log frame and/or stacktrace
     :param ex:          The exception object
@@ -145,7 +145,7 @@ def debugException(ex=None, log_ex=True, print_ex=False, showstack=True):
 
             if funcname != '<module>':
                 funcname = funcname + '()'
-            text += "[FILE]: {}\n[LINE NUM]: {}\n[FUNCTION]: {}\n[SOURCE]: {}".format(filename, linenum, funcname,
+            text += "[FILE]: {}\n[LINE NUM]: {}\n[FUNCTION]: {}\n[SOURCE]: {}\n".format(filename, linenum, funcname,
                                                                                       source)
     if log_ex:
         IO.logerr(text)
@@ -153,7 +153,7 @@ def debugException(ex=None, log_ex=True, print_ex=False, showstack=True):
         IO.printerr(text)
 
 
-def debugEndpoint(log_out=False, print_out=True, **kwargs):
+def debugEndpoint(log_out=True, print_out=True, **kwargs):
     """
     Debug an endpoint, must be run within request context
     :param log_out:       True | False
@@ -179,7 +179,7 @@ def debugEndpoint(log_out=False, print_out=True, **kwargs):
     if frame.f_code.co_name != '<module>':
         calling_chain.append(frame.f_code.co_name)
 
-    text = "((( [DEBUG ENDPOINT]: {} )))\n".format(' -> '.join(calling_chain))
+    text = "((( [SHOMESEC_DEBUG ENDPOINT]: {} )))\n".format(' -> '.join(calling_chain))
     items_dict = objToDict(request)
     for k, v in sorted(items_dict.items()):
         text += '{}: {}\n'.format(k, str(v).strip())

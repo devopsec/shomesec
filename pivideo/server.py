@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
 
-import socket, weakref, signal, picamera, os, select, inspect
+import socket, weakref, signal, picamera, os, select
 from datetime import datetime
 from time import sleep
 from util.async import thread
+from util.printing import debugException
 import settings
 
 
+# TODO: switch to udp for better performance
+
 # TODO: move to a settings.py file
+run_dir = '/var/run/shomesec'
 pid_file = '/var/run/shomesec/pivid.pid'
 video_dir = "/var/backups/videos" # video storage
 video_current = os.path.join(video_dir, 'current.mjpeg')
@@ -43,9 +47,9 @@ def teardown():
 
 def setup():
     # make sure video backup dir exists
-    if not os.path.exists(video_dir):
-        os.makedirs(video_dir)
+    os.makedirs(video_dir, exist_ok=True)
     # create pid file
+    os.makedirs(run_dir, exist_ok=True)
     with open(pid_file, 'w') as pidfd:
         pidfd.write(str(os.getpid()))
 
@@ -255,7 +259,7 @@ class Server(object):
             conn.close()
 
             # readable, writable, exceptional = select.select((conn,), (conn,), (), 0)
-            # # DEBUG:
+            # # SHOMESEC_DEBUG:
             # print('readable: ', end='');print(readable);print('writeable: ', end='');print(writable)
             #
             # if writable[0].getpeername():
@@ -282,7 +286,10 @@ if __name__ == "__main__":
         signal.signal(signal.SIGUSR1, sigHandler)
         signal.signal(signal.SIGUSR2, sigHandler)
         server.start()
+    except KeyboardInterrupt:
+        exit(0)
     except Exception as ex:
-        print("Server Error: {}".format(str(ex)))
+        debugException(ex)
+        exit(1)
     finally:
         teardown()
