@@ -3,7 +3,7 @@
 import socket, weakref, signal, picamera, os, select
 from datetime import datetime
 from time import sleep
-from util.async import thread
+from util.pyasync import thread
 from util.printing import debugException
 import settings
 
@@ -11,8 +11,8 @@ import settings
 # TODO: switch to udp for better performance
 
 # TODO: move to a settings.py file
-run_dir = '/var/run/shomesec'
-pid_file = '/var/run/shomesec/pivid.pid'
+run_dir = '/run/shomesec'
+pid_file = '/run/shomesec/pivid.pid'
 video_dir = "/var/backups/videos" # video storage
 video_current = os.path.join(video_dir, 'current.mjpeg')
 video_resolution = (1640,1232) # resolution in pixels

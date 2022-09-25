@@ -10,7 +10,7 @@
 <h1>Simple Home Security v{{ version }}</h1>
 <div style="display: flex; flex-wrap: wrap; padding: 2px;">
   {% for id in sensors %}
-  <img src="{{ url_for('video_feed', sensor_id=id) }}" width="{{ resolution[0] }}" height="{{ resolution[1] }}">
+  <img src="{{ url_for('video_feed', sensor_id=id) }}" alt="" width="{{ resolution[0] }}" height="{{ resolution[1] }}">
   {% endfor %}
 </div>
 </body>

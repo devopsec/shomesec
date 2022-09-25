@@ -5,7 +5,7 @@ from copy import copy
 from flask import render_template, request, redirect, session, url_for, Response, send_from_directory
 from flask_script import Manager
 from util.printing import IO, debugException, debugEndpoint
-from util.async import thread, proc
+from util.pyasync import thread, proc
 from util.flaskcustom import CustomFlask, CustomServer, CustomSessionInterface, cleanupSessionSocks, cleanupRequestSocks
 import settings
 

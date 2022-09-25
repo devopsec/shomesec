@@ -1,17 +1,20 @@
 [Unit]
 Description=pi Security Sensor Service
 After=network.target pivid.service
+BindsTo=pivid.service
 
 [Service]
 Type=simple
 SyslogIdentifier=pisense
 Environment='SHOMESEC_PROJECT_DIR=/opt/shomesec'
 EnvironmentFile=-/etc/default/shomesec/pisense.conf
-PIDFile=/var/run/shomesec/pisense.pid
-ExecStartPre=-/bin/mkdir -p /var/run/shomesec
-ExecStartPre=-/bin/chown -R shomesec:shomesec /var/run/shomesec
+PIDFile=/run/shomesec/pisense.pid
+ExecStartPre=+/bin/mkdir -p /run/shomesec
+ExecStartPre=+/bin/chown -R shomesec:shomesec /run/shomesec
 ExecStart=/usr/bin/python3 ${SHOMESEC_PROJECT_DIR}/pisensor/sensor.py
 Restart=on-failure
+User=shomesec
+Group=shomesec
 
 [Install]
 WantedBy=multi-user.target

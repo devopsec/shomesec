@@ -11,8 +11,8 @@ from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 
 class ThreadingIter():
     """
-    Takes an iterator/generator and makes it thread-safe by
-    serializing call to the `next` method of given iterator/generator.
+    Takes an iterator/generator and makes it thread-safe\n
+    Implements locking for given iterator / generator
     """
 
     def __init__(self, iter):
@@ -53,6 +53,7 @@ def proc(func):
 def mpexec(func, args=None, kwargs=None, workers=None, callback=None):
     """
     Execute task with pool of processes
+
     :param func:        callable function to execute
     :param args:        list of arg lists for each function execution
     :param kwargs:      list of kwarg dicts for each function execution

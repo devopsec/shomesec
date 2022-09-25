@@ -71,6 +71,8 @@ def main():
         except Exception:
             print('Invalid choice, try again..')
 
+    print('host: {}'.format(host))
+    print('port: {}'.format(str(port)))
     stream = getVideoStream(host, port, sensor_id)
     print(stream)
 
@@ -102,6 +104,7 @@ def parseArgs():
             exit(1)
         if args[0].find(':') != -1:
             host, port = args[0].split(':')
+            port = int(port)
         else:
             host = args[0]
 

@@ -1,17 +1,22 @@
 [Unit]
 Description=pi Video Server Service
 After=network.target
+Requires=pisense.service
 
 [Service]
 Type=simple
 SyslogIdentifier=pivid
 Environment='SHOMESEC_PROJECT_DIR=/opt/shomesec'
 EnvironmentFile=-/etc/default/shomesec/pivid.conf
-PIDFile=/var/run/shomesec/pivid.pid
-ExecStartPre=-/bin/mkdir -p /var/run/shomesec
-ExecStartPre=-/bin/chown -R shomesec:shomesec /var/run/shomesec
+PIDFile=/run/shomesec/pivid.pid
+ExecStartPre=+/bin/mkdir -p /run/shomesec
+ExecStartPre=+/bin/chown -R shomesec:shomesec /run/shomesec
+ExecStartPre=+/bin/mkdir -p /var/backups/videos
+ExecStartPre=+/bin/chown -R shomesec:shomesec /var/backups/videos
 ExecStart=/usr/bin/python3 ${SHOMESEC_PROJECT_DIR}/pivideo/server.py
 Restart=on-failure
+User=shomesec
+Group=shomesec
 
 [Install]
 WantedBy=multi-user.target

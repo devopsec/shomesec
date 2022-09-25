@@ -43,8 +43,8 @@ NODESYNC_BUFFSIZE = 4096
 # Shomesec App Settings
 SHOMESEC_VERSION = 0.1
 SHOMESEC_DEBUG = False
-SHOMESEC_RUN_DIR = '/var/run/shomesec'
-SHOMESEC_PID_FILE = '/var/run/shomesec/piserve.pid'
+SHOMESEC_RUN_DIR = '/run/shomesec'
+SHOMESEC_PID_FILE = '/run/shomesec/piserve.pid'
 VIDEO_RESOLUTION = (1640,1232)  # resolution in pixels
 VIDEO_FPS = 40  # frames per second
 VIDEO_BUFFSIZE = 16384

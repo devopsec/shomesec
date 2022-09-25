@@ -124,7 +124,7 @@ def debugException(ex=None, log_ex=True, print_ex=True, showstack=False):
     # get detailed exception info
     if ex is None:
         ex = exc_value
-    for k,v in vars(ex).items():
+    for k, v in vars(ex).items():
         text += "[{}]: {}\n".format(k.upper(), str(v))
 
     # determine how far we trace it back
@@ -144,7 +144,7 @@ def debugException(ex=None, log_ex=True, print_ex=True, showstack=False):
             if funcname != '<module>':
                 funcname = funcname + '()'
             text += "[FILE]: {}\n[LINE NUM]: {}\n[FUNCTION]: {}\n[SOURCE]: {}\n".format(filename, linenum, funcname,
-                                                                                      source)
+                source)
     if log_ex:
         IO.logerr(text)
     if print_ex:

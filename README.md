@@ -7,6 +7,7 @@ Shomesec does NOT require any service fees and is completely customizable to fit
 
 - connect via website and stream live video from a number of cameras
 - connect via app and stream from a number of cameras
+- automated infrared camera lights for night time
 - motion sensor detection that records live video to file
 - door open/close detection with alarm awareness
 - notification via email on alarm

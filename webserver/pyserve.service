@@ -7,11 +7,16 @@ Type=simple
 SyslogIdentifier=pyserve
 Environment='SHOMESEC_PROJECT_DIR=/opt/shomesec'
 EnvironmentFile=-/etc/default/shomesec/pyserve.conf
-PIDFile=/var/run/shomesec/pyserve.pid
-ExecStartPre=-/bin/mkdir -p /var/run/shomesec
-ExecStartPre=-/bin/chown -R shomesec:shomesec /var/run/shomesec
+PIDFile=/run/shomesec/pyserve.pid
+ExecStartPre=+/bin/mkdir -p /run/shomesec
+ExecStartPre=+/bin/chown -R shomesec:shomesec /run/shomesec
 ExecStart=/usr/bin/python3 ${SHOMESEC_PROJECT_DIR}/webserver/server.py runserver
 Restart=on-failure
+#ExecStart=/usr/bin/uwsgi --ini webserver.ini
+#WorkingDirectory=${SHOMESEC_PROJECT_DIR}/webserver/uwsgi
+#NotifyAccess=all
+User=shomesec
+Group=shomesec
 
 [Install]
 WantedBy=multi-user.target

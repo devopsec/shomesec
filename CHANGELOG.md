@@ -2,6 +2,19 @@
 
 
 
+### update installer and several modules
+
+> Branches Affected: master  
+> Tags Affected:   
+> Date: Sun, 25 Sep 2022 15:29:39 -0400  
+> Author: Tyler Moore (tmoore@goflyball.com)  
+> Committer: Tyler Moore (tmoore@goflyball.com)  
+
+
+
+---
+
+
 ### Organize Modules and Some Upgrades
 
 > Branches Affected: master  
@@ -10,21 +23,6 @@
 > Author: Tyler Moore (tmoore@goflyball.com)  
 > Committer: Tyler Moore (tmoore@goflyball.com)  
 
-- update powerpoint to be more readable
-- update inventory lists
-- update module and service names
-- move install script to scripts dir
-- add shared_lib for scripts
-- update install script with current work
-- add placeholders for next modules
-- fix printing format issue with debugException
-- cleanup unused imports and settings
-- update vplayer to accept params
-- update vplayer by cleaning up function calls
-- update README to be semi-useful
-- update modules to not debug keyboard interrupts
-- move webserver settings to settings.py
-- fix run dir does not exist bug
 
 
 ---
@@ -38,7 +36,6 @@
 > Author: Tyler Moore (tmoore@goflyball.com)  
 > Committer: Tyler Moore (tmoore@goflyball.com)  
 
-- add support for auto joining sensors to cluster
 
 
 ---
@@ -52,9 +49,6 @@
 > Author: Tyler Moore (tmoore@goflyball.com)  
 > Committer: Tyler Moore (tmoore@goflyball.com)  
 
-- add email and sms notifications when alarm triggered
-- add process and thread pooling functinos
-- move each python modules resources into cleaner organization
 
 
 ---
@@ -68,8 +62,6 @@
 > Author: Tyler Moore (tmoore@goflyball.com)  
 > Committer: Tyler Moore (tmoore@goflyball.com)  
 
-- add vplayer request to connect to webserver directly
-- add info route to get active sensors from webserver
 
 
 ---
@@ -96,8 +88,6 @@
 > Author: Tyler Moore (tmoore@goflyball.com)  
 > Committer: Tyler Moore (tmoore@goflyball.com)  
 
-- stopped recording threads when not in use
-- used simplified streaming output where possible
 
 
 ---
@@ -111,9 +101,6 @@
 > Author: Tyler Moore (tmoore@goflyball.com)  
 > Committer: Tyler Moore (tmoore@goflyball.com)  
 
-- tweaks to resolution and buffer sizes
-- optimized stream threading
-- limit to 4 concurrent streams
 
 
 ---
@@ -127,10 +114,6 @@
 > Author: Tyler Moore (tmoore@goflyball.com)  
 > Committer: Tyler Moore (tmoore@goflyball.com)  
 
-- fix video streaming issues
-- added some async functions
-- addded support for multiple streams per client
-- many other bug fixes
 
 
 ---

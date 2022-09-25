@@ -4,8 +4,8 @@ from time import sleep
 from datetime import datetime, time
 import os, socket, signal, struct, hashlib, binascii
 import RPi.GPIO as GPIO
-import settings
-from util.async import proc
+import settings, globals
+from util.pyasync import proc
 from util.notifications import sendEmail, sendSMS
 from util.shared import getInternalIP
 from util.printing import debugException
@@ -14,39 +14,28 @@ from util.printing import debugException
 # TODO: move to settings.py
 #### app settings
 debug = True
-run_dir = '/var/run/shomesec'
-pid_file = '/var/run/shomesec/pisense.pid'
-pivid_pid_file = '/var/run/shomesec/pivid.pid'
+run_dir = '/run/shomesec'
+pid_file = '/run/shomesec/pisense.pid'
+pivid_pid_file = '/run/shomesec/pivid.pid'
 alarm_enabled = False
-alarm_active = False
 motion_sensor_enabled = True
 infrared_sensor_enabled = True
 door_sensor_enabled = True
 window_sensor_enabled = False
-camera_infrared_disabled = True
+camera_infrared_disabled = False
 record_timeout = 3 # seconds to record until checking motion sensor
 loop_delay = 1 # time between full sensor checks
 
 #### GPIO pin settings
-motion = 17 # BCM 17 (pin 11)
-infrared = 23 # BCM 23 (pin 16)
-door = 27 # BCM 27 (pin 13)
-window = 22 # BCM 22 (pin 15)
-
-#### pin setup
-GPIO.setwarnings(False)
-GPIO.setmode(GPIO.BCM)
-GPIO.setup(infrared, GPIO.OUT, initial=GPIO.HIGH)
-GPIO.setup(motion, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
-GPIO.setup(door, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
-GPIO.setup(window, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+motion = 17 # GPIO 17 (pin 11)
+infrared = 23 # GPIO 23 (pin 16)
+door = 27 # GPIO 27 (pin 13)
+window = 22 # GPIO 22 (pin 15)
 
 #### function definitions
 def sigHandler(signum=None, frame=None):
-    global alarm_active
-
     if signum == signal.SIGALRM.value:
-        alarm_active = True
+        globals.alarm_active = True
         print("alarm triggered")
 
         text_msg = 'Your Alarm was Triggered at {}'.format(str(datetime.now()))
@@ -128,6 +117,17 @@ def runSyncManager(delay):
 
 
 def setup():
+    # setup GPIO pins
+    GPIO.setwarnings(False)
+    GPIO.setmode(GPIO.BCM)
+    GPIO.setup(infrared, GPIO.OUT, initial=GPIO.HIGH)
+    GPIO.setup(motion, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+    GPIO.setup(door, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+    GPIO.setup(window, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+
+    # initialize globals
+    globals.initialize()
+
     # create pid file
     os.makedirs(run_dir, exist_ok=True)
     with open(pid_file, 'w') as pidfd:
@@ -146,8 +146,6 @@ def teardown():
         pass
 
 def main():
-    global alarm_active
-
     print("stabalizing sensors")
     sleep(3)
 
@@ -157,7 +155,7 @@ def main():
             print("door opened")
             if alarm_enabled:
                 # trigger alarm once until disarmed
-                if not alarm_active:
+                if not globals.alarm_active:
                     os.kill(os.getpid(), signal.SIGALRM)
 
         # motion activates video recording to file
