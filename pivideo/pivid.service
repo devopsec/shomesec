@@ -1,7 +1,7 @@
 [Unit]
 Description=pi Video Server Service
-After=network.target
-Requires=pisense.service
+After=network.target network-online.target systemd-journald.socket basic.target
+BindsTo=pisense.service
 
 [Service]
 Type=simple

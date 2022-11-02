@@ -1,4 +1,4 @@
-import re, inspect, socket
+import re, inspect
 
 def objToDict(obj):
     """
@@ -54,7 +54,7 @@ def updateConfig(config_obj, field_dict):
             config.write(config_str)
             config.truncate()
     except:
-        print('Problem updating the {0} configuration file').format(config_file)
+        print('Problem updating the {0} configuration file'.format(config_file))
 
 
 def stripDictVals(d):
@@ -64,3 +64,13 @@ def stripDictVals(d):
         elif isinstance(val, int):
             d[key] = int(str(val).strip())
     return d
+
+def totalSeconds(td):
+    """Returns the total seconds from a timedelta object.
+
+    :param timedelta td: the timedelta to be converted in seconds
+
+    :returns: number of seconds
+    :rtype: int
+    """
+    return td.days * 60 * 60 * 24 + td.seconds

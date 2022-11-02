@@ -1,13 +1,19 @@
 #!/usr/bin/env python3
 
-from time import sleep
-from datetime import datetime, time
-import os, socket, signal, struct, hashlib, binascii
+import os, sys, socket, signal, struct, hashlib, binascii, re, tzlocal
 import RPi.GPIO as GPIO
+from time import sleep
+from datetime import datetime
+if sys.version_info.major == 3 and sys.version_info.minor < 9:
+    from backports.zoneinfo import ZoneInfo
+else:
+    from zoneinfo import ZoneInfo
+from iso6709 import Location
+from suntime import Sun
 import settings, globals
 from util.pyasync import proc
 from util.notifications import sendEmail, sendSMS
-from util.shared import getInternalIP
+from util.networking import getInternalIP
 from util.printing import debugException
 
 
@@ -15,14 +21,13 @@ from util.printing import debugException
 #### app settings
 debug = True
 run_dir = '/run/shomesec'
-pid_file = '/run/shomesec/pisense.pid'
-pivid_pid_file = '/run/shomesec/pivid.pid'
+pid_file = os.path.join(run_dir, 'pisense.pid')
+pivid_pid_file = os.path.join(run_dir, 'pivid.pid')
 alarm_enabled = False
 motion_sensor_enabled = True
-infrared_sensor_enabled = True
 door_sensor_enabled = True
 window_sensor_enabled = False
-camera_infrared_disabled = False
+camera_infrared_enabled = True
 record_timeout = 3 # seconds to record until checking motion sensor
 loop_delay = 1 # time between full sensor checks
 
@@ -32,7 +37,32 @@ infrared = 23 # GPIO 23 (pin 16)
 door = 27 # GPIO 27 (pin 13)
 window = 22 # GPIO 22 (pin 15)
 
+#### timezone variables
+tz_name = ""
+tz_sun_info = object()
+
 #### function definitions
+def setTimezoneInfo():
+    global tz_name, tz_to_coords, tz_sun_info
+
+    tz_name = tzlocal.get_localzone_name()
+
+    with open('/usr/share/zoneinfo/zone1970.tab', 'r') as f:
+        for line in f:
+            if line[0] == '#':
+                continue
+
+            fields = line.split('\t')
+            fields[2] = fields[2].strip()
+            if fields[2] != tz_name:
+                continue
+
+            loc = Location(re.search(r'((?:\+|-)[0-9]+(?:\+|-)[0-9]+)', fields[1]).groups()[0])
+            #tz_to_coords = {}
+            #tz_to_coords[fields[2].strip()] = [int(x) for x in re.search(r'((?:\+|-)[0-9]+)((?:\+|-)[0-9]+)', fields[1]).groups()]
+
+    tz_sun_info = Sun(float(loc.lat.decimal), float(loc.lng.decimal))
+
 def sigHandler(signum=None, frame=None):
     if signum == signal.SIGALRM.value:
         globals.alarm_active = True
@@ -73,14 +103,15 @@ def norecord():
         print("pivid process is dead")
 
 def setIR():
-    if camera_infrared_disabled:
+    if not camera_infrared_enabled:
         GPIO.output(infrared, GPIO.HIGH)
         print("Camera IR Disabled")
     else:
-        timenow = datetime.now().time()
-        approx_sunrise = time(7,0)
-        approx_sunset = time(18,0)
-        if timenow < approx_sunrise or timenow > approx_sunset:
+        now = datetime.now(tz=ZoneInfo(tz_name))
+        datenow = now.date()
+        sunrise = tz_sun_info.get_local_sunrise_time(datenow)
+        sunset = tz_sun_info.get_local_sunset_time(datenow)
+        if now < sunrise or now > sunset:
             GPIO.output(infrared, GPIO.LOW)
             print("Camera IR Active")
         else:
@@ -94,11 +125,10 @@ def syncCurrentNode(ip):
 
     try:
         sock.connect((settings.NODESYNC_HOST, settings.NODESYNC_PORT))
-        req = struct.pack('<64s16si',
-                          binascii.hexlify(hashlib.sha256(bytes(ip+str(settings.VIDEO_PORT), 'utf-8')).digest()),
-                          ip.encode('utf-8'),
-                          settings.VIDEO_PORT)
-        hashlib.sha512()
+        nodeid = binascii.hexlify(hashlib.sha256(bytes(ip+str(settings.VIDEO_PORT), 'utf-8')).digest())
+        host = ip.encode('utf-8')
+        port = settings.VIDEO_PORT
+        req = struct.pack('<64s16si',nodeid,host,port)
         sock.send(req)
     except Exception:
         print('Could not connect to web server')
@@ -128,6 +158,9 @@ def setup():
     # initialize globals
     globals.initialize()
 
+    # set variables for all processes to use
+    setTimezoneInfo()
+
     # create pid file
     os.makedirs(run_dir, exist_ok=True)
     with open(pid_file, 'w') as pidfd:
@@ -136,6 +169,7 @@ def setup():
     # catch signals
     signal.signal(signal.SIGALRM, sigHandler)
 
+    # send data to the webserver in a separate process
     runSyncManager(settings.NODESYNC_DELAY)
 
 def teardown():
@@ -178,7 +212,7 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         exit(0)
     except Exception as ex:
-        debugException(ex)
+        debugException(ex, showstack=True)
         exit(1)
     finally:
         teardown()

@@ -5,6 +5,7 @@ WEB_PORT = 10000
 WEB_USER = 'admin'
 WEB_PASS = 'admin'
 WEB_TIMEOUT = 10
+WEB_SOCK = '/run/shomesec/pyserve.sock'
 
 # Logging Settings
 # syslog level and facility values based on:
@@ -44,7 +45,7 @@ NODESYNC_BUFFSIZE = 4096
 SHOMESEC_VERSION = 0.1
 SHOMESEC_DEBUG = False
 SHOMESEC_RUN_DIR = '/run/shomesec'
-SHOMESEC_PID_FILE = '/run/shomesec/piserve.pid'
+SHOMESEC_PID_FILE = '/run/shomesec/pyserve.pid'
 VIDEO_RESOLUTION = (1640,1232)  # resolution in pixels
 VIDEO_FPS = 40  # frames per second
 VIDEO_BUFFSIZE = 16384

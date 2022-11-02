@@ -1,7 +1,8 @@
 [Unit]
 Description=pi Security Sensor Service
-After=network.target pivid.service
-BindsTo=pivid.service
+After=network.target network-online.target systemd-journald.socket basic.target
+After=pivid.service
+Wants=pivid.service
 
 [Service]
 Type=simple

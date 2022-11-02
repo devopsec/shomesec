@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
-
-import socket, weakref, signal, picamera, os, select
+import io
+import socket, weakref, signal, os, select, logging
 from datetime import datetime
 from time import sleep
+from picamera2 import Picamera2
+from picamera2.encoders import JpegEncoder
+from picamera2.outputs import FileOutput
+from threading import Condition, Thread
 from util.pyasync import thread
 from util.printing import debugException
 import settings
@@ -12,12 +16,13 @@ import settings
 
 # TODO: move to a settings.py file
 run_dir = '/run/shomesec'
-pid_file = '/run/shomesec/pivid.pid'
+pid_file = os.path.join(run_dir, 'pivid.pid')
 video_dir = "/var/backups/videos" # video storage
 video_current = os.path.join(video_dir, 'current.mjpeg')
-video_resolution = (1640,1232) # resolution in pixels
+video_resolution = (1920, 1080) # resolution in pixels
 video_fps = 40 # frames per second
 video_timeout = 5 # timeout before recording dies (if no writes)
+log_level = logging.INFO
 
 # capped at 4 because thats the max number of splitter ports
 maxconns = 4
@@ -28,16 +33,16 @@ def sigHandler(signum=None, frame=None):
     # note: we are only recording to file on output 0
     # start recording
     if signum == signal.SIGUSR1.value:
-        server.video_outputs[0].recording = True
+        server.video_outputs[0].fileoutput.recording = True
     # stop recording
     elif signum == signal.SIGUSR2.value:
         # only process request if previously recording
-        if server.video_outputs[0].recording == True:
+        if server.video_outputs[0].fileoutput.recording == True:
             filename = datetime.strftime(datetime.now(), '%Y-%m-%d_%H-%M-%S.mjpeg')
             video_file = os.path.join(video_dir, filename)
             if os.path.exists(video_current):
                 os.rename(video_current, video_file)
-            server.video_outputs[0].setFile(video_current, buff=buffsize, recording=False)
+            server.video_outputs[0].fileoutput.setFile(video_current, buff=buffsize, recording=False)
 
 def teardown():
     try:
@@ -52,9 +57,9 @@ def setup():
     os.makedirs(run_dir, exist_ok=True)
     with open(pid_file, 'w') as pidfd:
         pidfd.write(str(os.getpid()))
+    Picamera2.set_logging(log_level)
 
-
-class StreamingOutput(object):
+class StreamingOutput(io.BufferedIOBase):
     """
     Streams output socket conditionally
     Automatically closes socket stream on early termination
@@ -78,19 +83,11 @@ class StreamingOutput(object):
 
     @classmethod
     def getActiveStreams(cls):
-        super_class = cls.mro()[1]
-        if not super_class.__name__ == 'object':
-            return super_class.getActiveStreams()
-        else:
-            return cls._active_streams
+        return StreamingOutput._active_streams
 
     @classmethod
     def setActiveStreams(cls, value):
-        super_class = cls.mro()[1]
-        if not super_class.__name__ == 'object':
-            super_class.setActiveStreams(value)
-        else:
-            cls._active_streams = value
+        StreamingOutput._active_streams = value
 
     def setSock(self, sock, buff=None, streaming=True):
         if self.output_stream:
@@ -121,6 +118,16 @@ class StreamingOutput(object):
             self.output_stream.close()
             self.streaming = False
             StreamingOutput.setActiveStreams(StreamingOutput.getActiveStreams() - 1)
+
+# class StreamingOutput(io.BufferedIOBase):
+#     def __init__(self):
+#         self.frame = None
+#         self.condition = Condition()
+#
+#     def write(self, buf):
+#         with self.condition:
+#             self.frame = buf
+#             self.condition.notify_all()
 
 class SplitOutput(StreamingOutput):
     """
@@ -172,6 +179,9 @@ class SplitOutput(StreamingOutput):
             self.recording = False
         super().close()
 
+# class SplitOutput(StreamingOutput):
+#     pass
+
 class Server(object):
     def __init__(self, host, port):
         """
@@ -183,12 +193,16 @@ class Server(object):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.video_outputs = [
-            SplitOutput(video_current, recording=False, streaming=False, buff=buffsize),
-            StreamingOutput(streaming=False, buff=buffsize),
-            StreamingOutput(streaming=False, buff=buffsize),
-            StreamingOutput(streaming=False, buff=buffsize),
+            FileOutput(SplitOutput(video_current, recording=False, streaming=False, buff=buffsize)),
+            FileOutput(StreamingOutput(streaming=False, buff=buffsize)),
+            FileOutput(StreamingOutput(streaming=False, buff=buffsize)),
+            FileOutput(StreamingOutput(streaming=False, buff=buffsize)),
         ]
-        self.camera = picamera.PiCamera(resolution=video_resolution, framerate=video_fps)
+        self.camera = Picamera2()
+        self.camera.configure(self.camera.create_video_configuration(
+            main={"size": video_resolution},
+            controls={"FrameRate": video_fps}
+        ))
         self._finalizer = weakref.finalize(self, self.close)
 
     def close(self):
@@ -216,10 +230,10 @@ class Server(object):
         print("Listening on {}".format(str(self.sock.getsockname())))
 
         # for i in range(len(self.video_outputs)):
-        #     self.camera.start_recording(self.video_outputs[i], format='mjpeg', splitter_port=i)
+        #     self.camera.start_recording(picamera2.encoders.JpegEncoder(), self.video_outputs[i])
 
         # the first camera output must always be recording in case we get a signal to output to file
-        self.camera.start_recording(self.video_outputs[0], format='mjpeg', splitter_port=0)
+        self.camera.start_recording(JpegEncoder(), self.video_outputs[0])
 
         while True:
             conn, addr = self.sock.accept()
@@ -233,18 +247,18 @@ class Server(object):
         print('active streams: {}'.format(active_streams))
 
         try:
-            # if active streams is 0 use the tell the camera thread to handle it with split output
+            # if active streams is 0 tell the camera thread to handle it with split output
             if active_streams  == 0:
-                self.video_outputs[0].setSock(conn, buff=buffsize)
+                self.video_outputs[0].fileoutput.setSock(conn, buff=buffsize)
 
             # otherwise we need to handle recording with this new thread
             else:
-                self.video_outputs[active_streams].setSock(conn, buff=buffsize)
-                self.camera.start_recording(self.video_outputs[active_streams], format='mjpeg', splitter_port=active_streams)
+                self.video_outputs[active_streams].fileoutput.setSock(conn, buff=buffsize)
+                self.camera.start_recording(JpegEncoder(), self.video_outputs[active_streams])
                 while True:
                     sleep(video_timeout)
-                    if not self.video_outputs[active_streams].streaming:
-                        self.camera.stop_recording(splitter_port=active_streams)
+                    if not self.video_outputs[active_streams].fileoutput.streaming:
+                        self.camera.stop_recording()
                         break
 
         except (BrokenPipeError, OSError, IndexError) as ex:
@@ -289,7 +303,7 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         exit(0)
     except Exception as ex:
-        debugException(ex)
+        debugException(ex, showstack=True)
         exit(1)
     finally:
         teardown()

@@ -1,33 +1,10 @@
 import uuid, socket
 from flask import Flask, Request, session, request
 from flask.sessions import SecureCookieSessionInterface
-from flask.helpers import total_seconds
-from flask_script import Server
 from itsdangerous import BadSignature, SignatureExpired
 from util.printing import IO
-import settings
+from util.shared import totalSeconds
 
-class CustomServer(Server):
-    """ Customize the Flask server with our settings """
-
-    def __init__(self):
-        super().__init__(
-            host=settings.WEB_HOST,
-            port=settings.WEB_PORT
-        )
-
-        if len(settings.WEB_SSL_CERT) > 0 and len(settings.WEB_SSL_KEY) > 0:
-            self.ssl_crt = settings.WEB_SSL_CERT
-            self.ssl_key = settings.WEB_SSL_KEY
-
-        if settings.SHOMESEC_DEBUG == True:
-            self.use_debugger = True
-            self.use_reloader = True
-        else:
-            self.use_debugger = None
-            self.use_reloader = None
-            self.threaded = True
-            self.processes = 1
 
 class CustomRequest(Request):
     """ Customize Flask Request to create unique id per request """
@@ -54,7 +31,7 @@ class CustomSessionInterface(SecureCookieSessionInterface):
         val = request.cookies.get(app.session_cookie_name)
         if not val:
             return self.session_class()
-        max_age = total_seconds(app.permanent_session_lifetime)
+        max_age = totalSeconds(app.permanent_session_lifetime)
         try:
             data = s.loads(val, max_age=max_age)
             return self.session_class(data)

@@ -2,9 +2,9 @@
 
 function printUsage() {
     printf '%s\n\n' "USAGE: ${BASH_ARGV[-1]} <command> [options]"
-    printf '\t%s\t%s\n' "COMMAND" "OPTIONS"
-    printf '\t%s\t%s\n' "install" "<ardsensor|pipanel|pisensor|webserver>"
-    printf '\t%s\t%s\n' "help" ""
+    printf '%s\t%s\n' "COMMAND" "OPTIONS"
+    printf '%s\t%s\n' "install" "<ardsensor|pipanel|pisensor|webserver>"
+    printf '%s\t%s\n' "help" ""
 }
 
 # parse cli args / options
@@ -91,12 +91,13 @@ fi
 if (( ${INSTALL_PISENSOR:-0} == 1 )); then
     # requirements for both modules
     apt-get update -y
-    apt-get install -y curl wget sed gawk vim perl logrotate rsyslog python python3 python3-pip python-dev python-setuptools python3-setuptools
+    apt-get install -y logrotate rsyslog python3 python3-pip python3-setuptools
     createShomesecUserGroup
     usermod -a -G gpio,kmem,video shomesec
+    mkdir -p /etc/default/shomesec
 
     # configure pisensor
-    python3 -m pip install ${PROJECT_DIR}/pisensor/requirements.txt
+    python3 -m pip install -r ${PROJECT_DIR}/pisensor/requirements.txt
 
     touch /etc/default/shomesec/pisense.conf
     cp -f ${PROJECT_DIR}/pisensor/pisense.service /lib/systemd/system/pisense.service
@@ -104,8 +105,8 @@ if (( ${INSTALL_PISENSOR:-0} == 1 )); then
     systemctl enable pisense
 
     # configure pivideo
-    apt-get install -y python-picamera python3-picamera
-    python3 -m pip install ${PROJECT_DIR}/pivideo/requirements.txt
+    apt-get install -y --no-install-recommends python3-picamera2
+    python3 -m pip install -r ${PROJECT_DIR}/pivideo/requirements.txt
 
     touch /etc/default/shomesec/pivid.conf
     cp -f ${PROJECT_DIR}/pivideo/pivid.service /lib/systemd/system/pivid.service
@@ -128,14 +129,15 @@ fi
 if (( ${INSTALL_WEBSERVER:-0} == 1 )); then
     # requirements for this module
     apt-get update -y
-    apt-get install -y curl wget sed gawk vim perl logrotate rsyslog python python3 python3-pip python-dev python-setuptools python3-setuptools
-    apt-get install -y ffmpeg libavcodec-dev vlc mplayer uwsgi uwsgi-emperor uwsgi-plugin-python3 nginx-full
-    python3 -m pip install ${PROJECT_DIR}/webserver/requirements.txt
+    apt-get install -y logrotate rsyslog python3 python3-pip python3-setuptools
+    apt-get install -y ffmpeg libavcodec-dev vlc mplayer uwsgi uwsgi-emperor uwsgi-plugin-python3 nginx-full libev-dev
+    python3 -m pip install -r ${PROJECT_DIR}/webserver/requirements.txt
     createShomesecUserGroup
 
     # configure web server
     # TODO: create TLS certs (letsencrypt or self-signed)
     # TODO: configure nginx configs (defaults and our site)
+    mkdir -p /etc/default/shomesec
     touch /etc/default/shomesec/pyserve.conf
     cp -f ${PROJECT_DIR}/webserver/pyserve.service /lib/systemd/system/pyserve.service
     systemctl daemon-reload
@@ -154,7 +156,7 @@ fi
 
 # TODO: add firewall settings (iptables)
 
-# add apps to /usr/local/bin or /usr/bin
+# add apps to /usr/bin
 
 # TODO: setup logging
 

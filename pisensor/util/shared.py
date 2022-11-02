@@ -54,7 +54,7 @@ def updateConfig(config_obj, field_dict):
             config.write(config_str)
             config.truncate()
     except:
-        print('Problem updating the {0} configuration file').format(config_file)
+        print('Problem updating the {0} configuration file'.format(config_file))
 
 
 def stripDictVals(d):
@@ -64,9 +64,3 @@ def stripDictVals(d):
         elif isinstance(val, int):
             d[key] = int(str(val).strip())
     return d
-
-def getInternalIP():
-    """ Returns current ip of system """
-    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-        s.connect(("8.8.8.8", 80))
-        return s.getsockname()[0]

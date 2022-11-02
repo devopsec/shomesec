@@ -54,7 +54,7 @@ def updateConfig(config_obj, field_dict):
             config.write(config_str)
             config.truncate()
     except:
-        print('Problem updating the {0} configuration file').format(config_file)
+        print('Problem updating the {0} configuration file'.format(config_file))
 
 
 def stripDictVals(d):

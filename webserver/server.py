@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 
-import os, socket, signal, logging, datetime, uuid, json, weakref, struct
+import os, socket, signal, logging, datetime, uuid, json, weakref, struct, bjoern
 from copy import copy
 from flask import render_template, request, redirect, session, url_for, Response, send_from_directory
-from flask_script import Manager
 from util.printing import IO, debugException, debugEndpoint
 from util.pyasync import thread, proc
-from util.flaskcustom import CustomFlask, CustomServer, CustomSessionInterface, cleanupSessionSocks, cleanupRequestSocks
+from util.flaskcustom import CustomFlask, CustomSessionInterface, cleanupSessionSocks, cleanupRequestSocks
 import settings
 
 
@@ -20,7 +19,6 @@ active_socks = {} # { session_id: { request_id: [ socks ] } }
 active_pisensors = {} # { sensor_id: (host, port) }
 app = CustomFlask(__name__, static_folder="./static", static_url_path="/static",
                   session_interface=CustomSessionInterface(cleanupSessionSocks, active_socks=active_socks))
-app_manager = Manager(app, with_default_commands=False)
 # db = loadSession()
 
 
@@ -142,12 +140,6 @@ def favicon():
     return send_from_directory(os.path.join(app.root_path, 'static'),
                                'favicon.ico', mimetype='image/vnd.microsoft.icon')
 
-
-@app_manager.command
-def version():
-    """ Print current version """
-    print(settings.SHOMESEC_VERSION)
-
 def sigHandler(signum=None, frame=None):
     if signum == signal.SIGHUP.value:
         IO.logwarn("Received SIGHUP.. ignoring signal")
@@ -214,12 +206,12 @@ class SocketServer(object):
         try:
             # handle node synchronization request
             sensor_info = struct.unpack('<64s16si', conn.recv(settings.NODESYNC_BUFFSIZE))
-            id = sensor_info[0].decode('utf-8')
+            nodeid = sensor_info[0].decode('utf-8')
             host = sensor_info[1].decode('utf-8').rstrip('\x00')
             port = sensor_info[2]
 
-            if not id in active_pisensors:
-                active_pisensors[id] = (host, port)
+            if not nodeid in active_pisensors:
+                active_pisensors[nodeid] = (host, port)
                 print('active sensors: ', end=''); print(active_pisensors)
 
 
@@ -236,7 +228,7 @@ class SocketServer(object):
 
 def initApp(flask_app):
     # Setup the Flask session manager with a random secret key
-    flask_app.secret_key = os.urandom(12)
+    flask_app.secret_key = os.urandom(32)
 
     # # Add jinja2 filters
     # flask_app.jinja_env.filters["attrFilter"] = attrFilter
@@ -248,22 +240,9 @@ def initApp(flask_app):
     # Add jinja2 functions
     flask_app.jinja_env.globals.update(zip=zip)
 
-    # # Dynamically update settings
-    # fields = {}
-    # fields['INTERNAL_IP_ADDR'] = getInternalIP()
-    # fields['INTERNAL_IP_NET'] = "{}.*".format(getInternalIP().rsplit(".", 1)[0])
-    # fields['EXTERNAL_IP_ADDR'] = getExternalIP()
-    # updateConfig(settings, fields)
-    # reload(settings)
-
     # configs depending on updated settings go here
-    flask_app.env = "development" if settings.SHOMESEC_DEBUG else "production"
     flask_app.debug = settings.SHOMESEC_DEBUG
     flask_app.permanent_session_lifetime = datetime.timedelta(minutes=settings.WEB_TIMEOUT)
-
-    # Flask App Manager configs
-    app_manager.help_args = ('-?', '--help')
-    app_manager.add_command('runserver', CustomServer())
 
     # trap signals here
     signal.signal(signal.SIGHUP, sigHandler)
@@ -274,7 +253,8 @@ def initApp(flask_app):
         pidfd.write(str(os.getpid()))
 
     # start the app server
-    app_manager.run()
+    #bjoern.run(flask_app, 'unix:{}'.format(settings.WEB_SOCK), reuse_port=True)
+    bjoern.run(flask_app, settings.WEB_HOST, settings.WEB_PORT, reuse_port=True)
 
 def teardown():
     for session_id, session_data in active_socks.items():

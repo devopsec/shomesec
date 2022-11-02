@@ -14,7 +14,7 @@ MAIL_DEFAULT_SUBJECT = "Simple Home Security System Notification"
 SMS_NUMBER_LOOKUP_URL = 'https://api.telnyx.com/v1/phone_number/'
 
 # settings for node sync server
-NODESYNC_HOST = '192.168.1.69'
+NODESYNC_HOST = '192.168.1.131'
 NODESYNC_PORT = 10001
 NODESYNC_DELAY = 60
 
